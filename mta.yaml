@@ -3,96 +3,139 @@ ID: companycodes-codelab
 description: A simple CAP project.
 version: 1.0.0
 modules:
-  - name: companycodes-codelab-srv
-    type: nodejs
-    path: gen/srv
-    requires:
-      - name: companycodes-codelab-db
-      - name: uaa_companycodes-codelab
-      - name: companycodes-codelab-destination-service
-    provides:
-      - name: srv-api
-        properties:
-          srv-url: ${default-url}
+- name: companycodes-codelab-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: companycodes-codelab-db
+  - name: uaa_companycodes-codelab
+  - name: companycodes-codelab-destination-service
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+    readiness-health-check-http-endpoint: /health
+    readiness-health-check-type: http
+  build-parameters:
+    builder: npm
+- name: companycodes-codelab-db-deployer
+  type: hdb
+  path: db
+  requires:
+  - name: companycodes-codelab-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: companycodes-codelab-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: companycodes-codelab-destination-service
     parameters:
-      buildpack: nodejs_buildpack
-      readiness-health-check-http-endpoint: /health
-      readiness-health-check-type: http
-    build-parameters:
-      builder: npm
-  - name: companycodes-codelab-db-deployer
-    type: hdb
-    path: db
-    requires:
-      - name: companycodes-codelab-db
+      content-target: true
+  - name: companycodes-codelab_html_repo_host
     parameters:
-      buildpack: nodejs_buildpack
-  - name: companycodes-codelab-destination-content
-    type: com.sap.application.content
-    requires:
-      - name: companycodes-codelab-destination-service
-        parameters:
-          content-target: true
-      - name: companycodes-codelab_html_repo_host
-        parameters:
-          service-key:
-            name: companycodes-codelab_html_repo_host-key
-      - name: uaa_companycodes-codelab
-        parameters:
-          service-key:
-            name: uaa_companycodes-codelab-key
+      service-key:
+        name: companycodes-codelab_html_repo_host-key
+  - name: uaa_companycodes-codelab
     parameters:
-      content:
+      service-key:
+        name: uaa_companycodes-codelab-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: CodeLabCCodesAppRouter_companycodes_codelab_html_repo_host
+          ServiceInstanceName: companycodes-codelab-html5-app-host-service
+          ServiceKeyName: companycodes-codelab_html_repo_host-key
+          sap.cloud.service: CodeLabCCodesAppRouter
+        - Authentication: OAuth2UserTokenExchange
+          Name: CodeLabCCodesAppRouter_uaa_companycodes_codelab
+          ServiceInstanceName: companycodes-codelab-xsuaa-service
+          ServiceKeyName: uaa_companycodes-codelab-key
+          sap.cloud.service: CodeLabCCodesAppRouter
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: companycodes-codelab-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: companycodes-codelab_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - clcompanycodescodelabcompanycodes.zip
+      name: clcompanycodescodelabcompanycodes
+      target-path: resources/
+- name: clcompanycodescodelabcompanycodes
+  type: html5
+  path: app/codelabcompanycodes
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: companycodes-codelab-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+- name: companycodes-codelab-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
         instance:
           destinations:
-            - Name: CodeLabCCodesAppRouter_companycodes_codelab_html_repo_host
-              ServiceInstanceName: companycodes-codelab-html5-app-host-service
-              ServiceKeyName: companycodes-codelab_html_repo_host-key
-              sap.cloud.service: CodeLabCCodesAppRouter
-            - Authentication: OAuth2UserTokenExchange
-              Name: CodeLabCCodesAppRouter_uaa_companycodes_codelab
-              ServiceInstanceName: companycodes-codelab-xsuaa-service
-              ServiceKeyName: uaa_companycodes-codelab-key
-              sap.cloud.service: CodeLabCCodesAppRouter
-          existing_destinations_policy: ignore
-    build-parameters:
-      no-source: true
-resources:
-  - name: companycodes-codelab-db
-    type: com.sap.xs.hdi-container
-    parameters:
-      service: hana
-      service-plan: hdi-shared
-  - name: companycodes-codelab-destination-service
-    type: org.cloudfoundry.managed-service
-    parameters:
-      config:
-        HTML5Runtime_enabled: true
-        version: 1.0.0
-      service: destination
-      service-name: companycodes-codelab-destination-service
-      service-plan: lite
-  - name: companycodes-codelab_html_repo_host
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: html5-apps-repo
-      service-name: companycodes-codelab-html5-app-host-service
-      service-plan: app-host
-  - name: uaa_companycodes-codelab
-    type: org.cloudfoundry.managed-service
-    parameters:
-      path: ./xs-security.json
-      service: xsuaa
-      service-name: companycodes-codelab-xsuaa-service
-      service-plan: application
-      config:
-        xsappname: companycodes-codelab-${org}-${space}
-        tenant-mode: dedicated
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          - Authentication: NoAuthentication
+            HTML5.DynamicDestination: true
+            HTML5.ForwardAuthToken: true
+            Name: companycodes-codelab-srv-api
+            ProxyType: Internet
+            Type: HTTP
+            URL: ~{srv-api/srv-url}
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: companycodes-codelab-destination-service
+    service-plan: lite
+  requires:
+  - name: srv-api
+- name: companycodes-codelab_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: companycodes-codelab-html5-app-host-service
+    service-plan: app-host
+- name: uaa_companycodes-codelab
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      tenant-mode: dedicated
+      xsappname: companycodes-codelab-${org}-${space}
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: companycodes-codelab-xsuaa-service
+    service-plan: application
 parameters:
+  deploy_mode: html5-repo
   enable-parallel-deployments: true
 build-parameters:
   before-all:
-    - builder: custom
-      commands:
-        - npm ci
-        - npx cds build --production
+  - builder: custom
+    commands:
+    - npm ci
+    - npx cds build --production
