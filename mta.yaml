@@ -1,7 +1,93 @@
-_schema-version: '3.1'
+_schema-version: "3.1"
 ID: companycodes-codelab
+description: A simple CAP project.
 version: 1.0.0
-description: "A simple CAP project."
+modules:
+  - name: companycodes-codelab-srv
+    type: nodejs
+    path: gen/srv
+    requires:
+      - name: companycodes-codelab-db
+      - name: uaa_companycodes-codelab
+      - name: companycodes-codelab-destination-service
+    provides:
+      - name: srv-api
+        properties:
+          srv-url: ${default-url}
+    parameters:
+      buildpack: nodejs_buildpack
+      readiness-health-check-http-endpoint: /health
+      readiness-health-check-type: http
+    build-parameters:
+      builder: npm
+  - name: companycodes-codelab-db-deployer
+    type: hdb
+    path: db
+    requires:
+      - name: companycodes-codelab-db
+    parameters:
+      buildpack: nodejs_buildpack
+  - name: companycodes-codelab-destination-content
+    type: com.sap.application.content
+    requires:
+      - name: companycodes-codelab-destination-service
+        parameters:
+          content-target: true
+      - name: companycodes-codelab_html_repo_host
+        parameters:
+          service-key:
+            name: companycodes-codelab_html_repo_host-key
+      - name: uaa_companycodes-codelab
+        parameters:
+          service-key:
+            name: uaa_companycodes-codelab-key
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Name: CodeLabCCodesAppRouter_companycodes_codelab_html_repo_host
+              ServiceInstanceName: companycodes-codelab-html5-app-host-service
+              ServiceKeyName: companycodes-codelab_html_repo_host-key
+              sap.cloud.service: CodeLabCCodesAppRouter
+            - Authentication: OAuth2UserTokenExchange
+              Name: CodeLabCCodesAppRouter_uaa_companycodes_codelab
+              ServiceInstanceName: companycodes-codelab-xsuaa-service
+              ServiceKeyName: uaa_companycodes-codelab-key
+              sap.cloud.service: CodeLabCCodesAppRouter
+          existing_destinations_policy: ignore
+    build-parameters:
+      no-source: true
+resources:
+  - name: companycodes-codelab-db
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+  - name: companycodes-codelab-destination-service
+    type: org.cloudfoundry.managed-service
+    parameters:
+      config:
+        HTML5Runtime_enabled: true
+        version: 1.0.0
+      service: destination
+      service-name: companycodes-codelab-destination-service
+      service-plan: lite
+  - name: companycodes-codelab_html_repo_host
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-name: companycodes-codelab-html5-app-host-service
+      service-plan: app-host
+  - name: uaa_companycodes-codelab
+    type: org.cloudfoundry.managed-service
+    parameters:
+      path: ./xs-security.json
+      service: xsuaa
+      service-name: companycodes-codelab-xsuaa-service
+      service-plan: application
+      config:
+        xsappname: companycodes-codelab-${org}-${space}
+        tenant-mode: dedicated
 parameters:
   enable-parallel-deployments: true
 build-parameters:
@@ -10,34 +96,3 @@ build-parameters:
       commands:
         - npm ci
         - npx cds build --production
-modules:
-  - name: companycodes-codelab-srv
-    type: nodejs
-    path: gen/srv
-    parameters:
-      buildpack: nodejs_buildpack
-      readiness-health-check-type: http
-      readiness-health-check-http-endpoint: /health
-    build-parameters:
-      builder: npm
-    provides:
-      - name: srv-api # required by consumers of CAP services (e.g. approuter)
-        properties:
-          srv-url: ${default-url}
-    requires:
-      - name: companycodes-codelab-db
-
-  - name: companycodes-codelab-db-deployer
-    type: hdb
-    path: db #gen/db
-    parameters:
-      buildpack: nodejs_buildpack
-    requires:
-      - name: companycodes-codelab-db
-
-resources:
-  - name: companycodes-codelab-db
-    type: com.sap.xs.hdi-container
-    parameters:
-      service: hana
-      service-plan: hdi-shared

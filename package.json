@@ -8,7 +8,7 @@
   "dependencies": {
     "@sap/cds": "^7",
     "@sap/cds-hana": "^2",
-    "@sap/xssec": "^4.0.0",
+    "@sap/xssec": "^3",
     "express": "^4"
   },
   "devDependencies": {
@@ -36,6 +36,7 @@
       "db": {
         "kind": "hana-cloud"
       },
+      "auth": "xsuaa",
       "API_COMPANYCODE_SRV": {
         "kind": "odata-v2",
         "model": "srv/external/API_COMPANYCODE_SRV"
