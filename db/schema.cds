@@ -16,33 +16,39 @@ using {
 
 //Entities
 entity CompanyCodes : managed {
-        @UI.Hidden
-    key id              : UUID;
-
-        @mandatory
-        @assert.unique
-        companycode     : String(4);
-        companycodename : String(50);
-        city            : String(20);
-        country         : String(20);
-        currency        : String(3);
+    key id              : UUID       @(UI.Hidden);
+        companycode     : String(4)  @(
+            title: '{i18n>Cocd}',
+            mandatory,
+            assert.unique
+        );
+        companycodename : String(50) @(title: '{i18n>Conm}');
+        city            : String(20) @(title: '{i18n>City}');
+        country         : String(20) @(title: '{i18n>Ctry}');
+        currency        : String(3)  @(title: '{i18n>Curr}');
         language        : Language;
-        addressnumber   : Int32;
+        addressnumber   : String(10) @(title: '{i18n>Adrn}');
 }
 
 entity Addresses {
-        @UI.Hidden
-    key id              : UUID;
-        addressnumber   : Association to CompanyCodes;
-        personnelnumber : Int32;
-        emailaddress    : String(50);
+    key id              : UUID                        @(UI.Hidden);
+        addressnumber   : Association to CompanyCodes @(
+                              title: '{i18n>Adrn}',
+                              mandatory,
+                              assert.unique
+                          );
+        personnelnumber : String(10)                  @(title: '{i18n>Psnm}');
+        emailaddress    : String(50)                  @(title: '{i18n>Eadd}');
 }
 
 entity PersonnelNumbers {
-        @UI.Hidden
-    key id              : UUID;
-        personnelnumber : Association to Addresses;
-        lastname        : String(20);
-        firstname       : String(20);
-        position        : String(20);
+    key id              : UUID                     @(UI.Hidden);
+        personnelnumber : Association to Addresses @(
+                              title: '{i18n>Psnm}',
+                              mandatory,
+                              assert.unique
+                          );
+        lastname        : String(20)               @(title: '{i18n>Lnam}');
+        firstname       : String(20)               @(title: '{i18n>Fnam}');
+        position        : String(20)               @(title: '{i18n>Posi}');
 }
